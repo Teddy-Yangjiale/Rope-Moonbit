@@ -1,0 +1,7 @@
+import {
+  "Teddy-Yangjiale/rope/src" @src,
+}
+
+options(
+  "is-main": true,
+)
