@@ -7,7 +7,9 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+  # ── Job 1: Format check ──────────────────────────────────────────────────
+  fmt:
+    name: Format Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,20 +19,85 @@ jobs:
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
-      - name: Check versions
-        run: moon version --all
+      - name: Cache MoonBit dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.moon
+          key: moon-${{ runner.os }}-${{ hashFiles('moon.mod') }}
+          restore-keys: moon-${{ runner.os }}-
 
       - name: Update dependencies
         run: moon update
 
-      - name: Check
-        run: moon check
+      - name: Check formatting
+        run: moon fmt --check
 
-      - name: Build
-        run: moon build
+  # ── Job 2: Type check with warnings-as-errors ─────────────────────────────
+  check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Test
-        run: moon test
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
-      - name: Run example
+      - name: Cache MoonBit dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.moon
+          key: moon-${{ runner.os }}-${{ hashFiles('moon.mod') }}
+          restore-keys: moon-${{ runner.os }}-
+
+      - name: Update dependencies
+        run: moon update
+
+      - name: moon version
+        run: moon version --all
+
+      - name: Type check (warnings as errors)
+        run: moon check --deny-warn
+
+  # ── Job 3: Build & Test (matrix: wasm-gc / native / js) ──────────────────
+  test:
+    name: Test (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ wasm-gc, native, js ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Cache MoonBit dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.moon
+          key: moon-${{ runner.os }}-${{ hashFiles('moon.mod') }}
+          restore-keys: moon-${{ runner.os }}-
+
+      - name: Update dependencies
+        run: moon update
+
+      - name: Build (${{ matrix.target }})
+        run: moon build --target ${{ matrix.target }}
+
+      - name: Test (${{ matrix.target }})
+        run: moon test --target ${{ matrix.target }}
+
+      - name: Test with coverage (wasm-gc only)
+        if: matrix.target == 'wasm-gc'
+        run: moon test --target wasm-gc --enable-coverage
+
+      - name: Run example (wasm-gc only)
+        if: matrix.target == 'wasm-gc'
         run: moon run examples

@@ -1,9 +1,11 @@
 // Metric computation helpers
 
+///|
 pub fn metrics_empty() -> Metrics {
   { bytes: 0, chars: 0, lines: 0 }
 }
 
+///|
 pub fn metrics_of_str(s : String) -> Metrics {
   let chars = s.length()
   let bytes = s.length()
@@ -16,10 +18,16 @@ pub fn metrics_of_str(s : String) -> Metrics {
   { bytes, chars, lines }
 }
 
+///|
 pub fn metrics_add(a : Metrics, b : Metrics) -> Metrics {
-  { bytes: a.bytes + b.bytes, chars: a.chars + b.chars, lines: a.lines + b.lines }
+  {
+    bytes: a.bytes + b.bytes,
+    chars: a.chars + b.chars,
+    lines: a.lines + b.lines,
+  }
 }
 
+///|
 pub fn metrics_of_node(node : Node) -> Metrics {
   match node {
     Leaf(s) => metrics_of_str(s)

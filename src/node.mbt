@@ -1,6 +1,8 @@
 // B-tree node operations
 
 // Build a node from a string, splitting into leaves as needed
+
+///|
 pub fn node_from_str(s : String) -> Node {
   if s.length() <= max_leaf_bytes {
     Leaf(s)
@@ -27,9 +29,10 @@ pub fn node_from_str(s : String) -> Node {
   }
 }
 
+///|
 fn node_balance_children(
   children : Array[Node],
-  metrics_arr : Array[Metrics]
+  metrics_arr : Array[Metrics],
 ) -> Node {
   if children.length() <= max_children {
     return Internal({ children, metrics: metrics_arr })
@@ -53,7 +56,9 @@ fn node_balance_children(
     for k = 0; k < sub_metrics.length(); k = k + 1 {
       m = metrics_add(m, sub_metrics[k])
     }
-    parent_children.push(Internal({ children: sub_children, metrics: sub_metrics }))
+    parent_children.push(
+      Internal({ children: sub_children, metrics: sub_metrics }),
+    )
     parent_metrics.push(m)
     i = i + max_children
   }
@@ -61,6 +66,8 @@ fn node_balance_children(
 }
 
 // Collect all text from a node
+
+///|
 pub fn node_collect(node : Node) -> String {
   match node {
     Leaf(s) => s
@@ -75,6 +82,8 @@ pub fn node_collect(node : Node) -> String {
 }
 
 // Insert text at char_idx
+
+///|
 pub fn node_insert(node : Node, char_idx : Int, text : String) -> Node {
   match node {
     Leaf(s) => {
@@ -93,7 +102,11 @@ pub fn node_insert(node : Node, char_idx : Int, text : String) -> Node {
         }
         offset = offset + child_chars
       }
-      let new_child = node_insert(data.children[target], char_idx - offset, text)
+      let new_child = node_insert(
+        data.children[target],
+        char_idx - offset,
+        text,
+      )
       let new_children = data.children.copy()
       let new_metrics = data.metrics.copy()
       new_children[target] = new_child
@@ -104,6 +117,8 @@ pub fn node_insert(node : Node, char_idx : Int, text : String) -> Node {
 }
 
 // Remove chars [start, end_) from node
+
+///|
 pub fn node_remove(node : Node, start : Int, end_ : Int) -> Node {
   match node {
     Leaf(s) => {
@@ -123,8 +138,16 @@ pub fn node_remove(node : Node, start : Int, end_ : Int) -> Node {
           new_children.push(data.children[i])
           new_metrics.push(data.metrics[i])
         } else {
-          let local_start = if start > child_start { start - child_start } else { 0 }
-          let local_end = if end_ < child_end { end_ - child_start } else { child_chars }
+          let local_start = if start > child_start {
+            start - child_start
+          } else {
+            0
+          }
+          let local_end = if end_ < child_end {
+            end_ - child_start
+          } else {
+            child_chars
+          }
           let new_child = node_remove(data.children[i], local_start, local_end)
           let m = metrics_of_node(new_child)
           if m.chars > 0 {
@@ -146,6 +169,8 @@ pub fn node_remove(node : Node, start : Int, end_ : Int) -> Node {
 }
 
 // Get char at char_idx using string iteration
+
+///|
 pub fn node_char_at(node : Node, char_idx : Int) -> Char {
   match node {
     Leaf(s) => str_char_at(s, char_idx)
@@ -163,6 +188,7 @@ pub fn node_char_at(node : Node, char_idx : Int) -> Char {
   }
 }
 
+///|
 fn str_char_at(s : String, idx : Int) -> Char {
   let mut i = 0
   for c in s {
@@ -175,6 +201,8 @@ fn str_char_at(s : String, idx : Int) -> Char {
 }
 
 // Convert line index to char index (start of that line)
+
+///|
 pub fn node_line_to_char(node : Node, line_idx : Int) -> Int {
   match node {
     Leaf(s) => str_line_to_char(s, line_idx)
@@ -184,7 +212,8 @@ pub fn node_line_to_char(node : Node, line_idx : Int) -> Int {
       for i = 0; i < data.children.length(); i = i + 1 {
         let child_lines = data.metrics[i].lines
         if line_idx <= offset_lines + child_lines {
-          return offset_chars + node_line_to_char(data.children[i], line_idx - offset_lines)
+          return offset_chars +
+            node_line_to_char(data.children[i], line_idx - offset_lines)
         }
         offset_chars = offset_chars + data.metrics[i].chars
         offset_lines = offset_lines + child_lines
@@ -194,6 +223,7 @@ pub fn node_line_to_char(node : Node, line_idx : Int) -> Int {
   }
 }
 
+///|
 fn str_line_to_char(s : String, line_idx : Int) -> Int {
   if line_idx == 0 {
     return 0
@@ -213,6 +243,8 @@ fn str_line_to_char(s : String, line_idx : Int) -> Int {
 }
 
 // Convert char index to line number
+
+///|
 pub fn node_char_to_line(node : Node, char_idx : Int) -> Int {
   match node {
     Leaf(s) => str_char_to_line(s, char_idx)
@@ -222,7 +254,8 @@ pub fn node_char_to_line(node : Node, char_idx : Int) -> Int {
       for i = 0; i < data.children.length(); i = i + 1 {
         let child_chars = data.metrics[i].chars
         if char_idx <= offset_chars + child_chars {
-          return offset_lines + node_char_to_line(data.children[i], char_idx - offset_chars)
+          return offset_lines +
+            node_char_to_line(data.children[i], char_idx - offset_chars)
         }
         offset_chars = offset_chars + child_chars
         offset_lines = offset_lines + data.metrics[i].lines
@@ -232,6 +265,7 @@ pub fn node_char_to_line(node : Node, char_idx : Int) -> Int {
   }
 }
 
+///|
 fn str_char_to_line(s : String, char_idx : Int) -> Int {
   let mut lines = 0
   let mut i = 0

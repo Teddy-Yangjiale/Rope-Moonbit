@@ -20,7 +20,9 @@ fn main {
   // Iterate lines
   println("\nLines:")
   let mut i = 0
-  r.lines().each(fn(line) {
+  r
+  .lines()
+  .each(fn(line) {
     println("  [\{i}] \{line.to_string()}")
     i = i + 1
   })

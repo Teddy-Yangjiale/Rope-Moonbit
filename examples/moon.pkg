@@ -1,5 +1,5 @@
 import {
-  "Teddy-Yangjiale/rope/src" @src,
+  "Teddy-Yangjiale/rope/src",
 }
 
 options(
