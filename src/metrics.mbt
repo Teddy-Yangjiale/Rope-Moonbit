@@ -5,12 +5,30 @@ pub fn metrics_empty() -> Metrics {
   { bytes: 0, chars: 0, lines: 0 }
 }
 
+// Returns the number of UTF-8 bytes needed to encode a Unicode code point.
+
+///|
+pub fn char_utf8_len(c : Char) -> Int {
+  let code = c.to_int()
+  if code < 0x80 {
+    1
+  } else if code < 0x800 {
+    2
+  } else if code < 0x10000 {
+    3
+  } else {
+    4
+  }
+}
+
 ///|
 pub fn metrics_of_str(s : String) -> Metrics {
-  let chars = s.length()
-  let bytes = s.length()
+  let mut chars = 0
+  let mut bytes = 0
   let mut lines = 0
   for c in s {
+    chars = chars + 1
+    bytes = bytes + char_utf8_len(c)
     if c == '\n' {
       lines = lines + 1
     }

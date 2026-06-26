@@ -103,6 +103,34 @@ pub fn Rope::line(self : Rope, line_idx : Int) -> RopeSlice {
 }
 
 ///|
+pub fn Rope::char_to_byte(self : Rope, char_idx : Int) -> Int {
+  let mut bytes = 0
+  let mut chars = 0
+  for c in self.chars() {
+    if chars == char_idx {
+      break
+    }
+    bytes = bytes + char_utf8_len(c)
+    chars = chars + 1
+  }
+  bytes
+}
+
+///|
+pub fn Rope::byte_to_char(self : Rope, byte_idx : Int) -> Int {
+  let mut bytes = 0
+  let mut chars = 0
+  for c in self.chars() {
+    if bytes >= byte_idx {
+      break
+    }
+    bytes = bytes + char_utf8_len(c)
+    chars = chars + 1
+  }
+  chars
+}
+
+///|
 pub fn RopeSlice::to_string(self : RopeSlice) -> String {
   let full = self.rope.to_string()
   full[self.start:self.end_].to_owned()
