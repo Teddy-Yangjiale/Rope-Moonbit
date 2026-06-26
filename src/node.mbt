@@ -1,5 +1,24 @@
 // B-tree node operations
 
+// Returns the UTF-16 code unit offset for the nth Unicode code point in s.
+// Needed because MoonBit s[i:j] slices by UTF-16 units but char indices
+// count Unicode scalar values (code points), which diverge for astral-plane
+// characters (U+10000+, e.g. emoji) that occupy two UTF-16 code units.
+
+///|
+fn str_char_to_utf16(s : String, char_idx : Int) -> Int {
+  let mut chars = 0
+  let mut units = 0
+  for c in s {
+    if chars >= char_idx {
+      break
+    }
+    units = units + char_utf16_len(c)
+    chars = chars + 1
+  }
+  units
+}
+
 // Build a node from a string, splitting into leaves as needed
 
 ///|
@@ -11,15 +30,24 @@ pub fn node_from_str(s : String) -> Node {
     let metrics_arr : Array[Metrics] = []
     let mut i = 0
     while i < s.length() {
-      let end = if i + max_leaf_bytes < s.length() {
+      let mut end = if i + max_leaf_bytes < s.length() {
         i + max_leaf_bytes
       } else {
         s.length()
       }
+      // Don't split inside a surrogate pair: if the code unit before `end`
+      // is a UTF-16 high surrogate (0xD800–0xDBFF), back up by one so the
+      // pair stays in the next chunk.
+      if end < s.length() {
+        let prev = s[end - 1].to_int()
+        if prev >= 0xD800 && prev <= 0xDBFF {
+          end = end - 1
+        }
+      }
       let chunk = s[i:end].to_owned()
       children.push(Leaf(chunk))
       metrics_arr.push(metrics_of_str(chunk))
-      i = i + max_leaf_bytes
+      i = end
     }
     if children.length() <= max_children {
       Internal({ children, metrics: metrics_arr })
@@ -87,8 +115,10 @@ pub fn node_collect(node : Node) -> String {
 pub fn node_insert(node : Node, char_idx : Int, text : String) -> Node {
   match node {
     Leaf(s) => {
-      let before = s[:char_idx].to_owned()
-      let after = s[char_idx:].to_owned()
+      // Convert code-point index to UTF-16 offset before slicing.
+      let u = str_char_to_utf16(s, char_idx)
+      let before = s[:u].to_owned()
+      let after = s[u:].to_owned()
       node_from_str(before + text + after)
     }
     Internal(data) => {
@@ -122,8 +152,11 @@ pub fn node_insert(node : Node, char_idx : Int, text : String) -> Node {
 pub fn node_remove(node : Node, start : Int, end_ : Int) -> Node {
   match node {
     Leaf(s) => {
-      let before = s[:start].to_owned()
-      let after = s[end_:].to_owned()
+      // Convert code-point indices to UTF-16 offsets before slicing.
+      let u_start = str_char_to_utf16(s, start)
+      let u_end = str_char_to_utf16(s, end_)
+      let before = s[:u_start].to_owned()
+      let after = s[u_end:].to_owned()
       Leaf(before + after)
     }
     Internal(data) => {
@@ -239,7 +272,8 @@ fn str_line_to_char(s : String, line_idx : Int) -> Int {
     }
     pos = pos + 1
   }
-  s.length()
+  // pos is the char (code-point) count of the whole string — correct fallback.
+  pos
 }
 
 // Convert char index to line number

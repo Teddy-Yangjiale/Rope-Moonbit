@@ -51,6 +51,11 @@ pub fn Rope::insert(self : Rope, char_idx : Int, text : String) -> Rope {
   if text.length() == 0 {
     return self
   }
+  if char_idx < 0 || char_idx > self.metrics.chars {
+    abort(
+      "Rope::insert: char_idx \{char_idx} out of range [0, \{self.metrics.chars}]",
+    )
+  }
   let new_root = node_insert(self.root, char_idx, text)
   let m = metrics_of_node(new_root)
   { root: new_root, metrics: m }
@@ -60,6 +65,11 @@ pub fn Rope::insert(self : Rope, char_idx : Int, text : String) -> Rope {
 pub fn Rope::remove(self : Rope, start : Int, end_ : Int) -> Rope {
   if start >= end_ {
     return self
+  }
+  if start < 0 || end_ > self.metrics.chars {
+    abort(
+      "Rope::remove: range [\{start}, \{end_}) out of bounds [0, \{self.metrics.chars}]",
+    )
   }
   let new_root = node_remove(self.root, start, end_)
   let m = metrics_of_node(new_root)
@@ -73,11 +83,20 @@ pub fn Rope::append(self : Rope, text : String) -> Rope {
 
 ///|
 pub fn Rope::char_at(self : Rope, char_idx : Int) -> Char {
+  if char_idx < 0 || char_idx >= self.metrics.chars {
+    abort(
+      "Rope::char_at: char_idx \{char_idx} out of range [0, \{self.metrics.chars})",
+    )
+  }
   node_char_at(self.root, char_idx)
 }
 
 ///|
 pub fn Rope::line_to_char(self : Rope, line_idx : Int) -> Int {
+  let n = self.len_lines()
+  if line_idx < 0 || line_idx >= n {
+    abort("Rope::line_to_char: line_idx \{line_idx} out of range [0, \{n})")
+  }
   node_line_to_char(self.root, line_idx)
 }
 
@@ -104,17 +123,25 @@ pub fn Rope::line(self : Rope, line_idx : Int) -> RopeSlice {
 
 ///|
 pub fn RopeBuilder::new() -> RopeBuilder {
-  { content: "" }
+  { chunks: [] }
 }
 
 ///|
 pub fn RopeBuilder::push(self : RopeBuilder, chunk : String) -> Unit {
-  self.content = self.content + chunk
+  if chunk.length() > 0 {
+    self.chunks.push(chunk)
+  }
 }
 
 ///|
 pub fn RopeBuilder::build(self : RopeBuilder) -> Rope {
-  Rope::from_str(self.content)
+  // Join all chunks in a single pass to build the full string once,
+  // then construct the B-tree from it.
+  let mut content = ""
+  for s in self.chunks {
+    content = content + s
+  }
+  Rope::from_str(content)
 }
 
 ///|
@@ -170,7 +197,11 @@ pub fn Rope::op_equal(self : Rope, other : Rope) -> Bool {
 ///|
 pub fn RopeSlice::to_string(self : RopeSlice) -> String {
   let full = self.rope.to_string()
-  full[self.start:self.end_].to_owned()
+  // self.start/end_ are char (code-point) indices; convert to UTF-16 offsets
+  // before slicing because MoonBit s[i:j] operates on UTF-16 code units.
+  let u_start = str_char_to_utf16(full, self.start)
+  let u_end = str_char_to_utf16(full, self.end_)
+  full[u_start:u_end].to_owned()
 }
 
 ///|

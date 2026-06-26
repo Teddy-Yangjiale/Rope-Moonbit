@@ -46,5 +46,5 @@ pub struct RopeSlice {
 
 ///|
 pub struct RopeBuilder {
-  mut content : String
+  chunks : Array[String]
 }

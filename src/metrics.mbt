@@ -5,6 +5,17 @@ pub fn metrics_empty() -> Metrics {
   { bytes: 0, chars: 0, lines: 0 }
 }
 
+// Returns UTF-16 code units per code point (1 for BMP, 2 for astral plane U+10000+).
+
+///|
+pub fn char_utf16_len(c : Char) -> Int {
+  if c.to_int() >= 0x10000 {
+    2
+  } else {
+    1
+  }
+}
+
 // Returns the number of UTF-8 bytes needed to encode a Unicode code point.
 
 ///|
