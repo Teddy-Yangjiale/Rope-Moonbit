@@ -136,3 +136,162 @@ test "insert into large text" {
   assert_eq(r2.len_chars(), 301)
   assert_eq(r2.char_at(150), 'X')
 }
+
+// --- Edge case tests ---
+
+///|
+test "empty rope operations" {
+  let r = Rope::new()
+  assert_eq(r.len_chars(), 0)
+  assert_eq(r.len_bytes(), 0)
+  assert_eq(r.len_lines(), 0)
+  assert_eq(r.is_empty(), true)
+  let r2 = r.insert(0, "")
+  assert_eq(r2.is_empty(), true)
+  let r3 = r.append("")
+  assert_eq(r3.is_empty(), true)
+}
+
+///|
+test "boundary inserts at zero and end" {
+  let r = Rope::from_str("bc")
+  let r2 = r.insert(0, "a")
+  assert_eq(r2.to_string(), "abc")
+  let r3 = r2.insert(3, "d")
+  assert_eq(r3.to_string(), "abcd")
+}
+
+///|
+test "remove noop when start equals end" {
+  let r = Rope::from_str("hello")
+  let r2 = r.remove(2, 2)
+  assert_eq(r2.to_string(), "hello")
+}
+
+///|
+test "unicode multibyte chars in rope" {
+  let r = Rope::from_str("你好世界")
+  assert_eq(r.len_chars(), 4)
+  assert_eq(r.len_bytes(), 12)
+  assert_eq(r.char_at(0), '你')
+  assert_eq(r.char_at(3), '界')
+  assert_eq(r.to_string(), "你好世界")
+}
+
+///|
+test "insert unicode into ascii rope" {
+  let r = Rope::from_str("hello world")
+  let r2 = r.insert(5, "，")
+  assert_eq(r2.len_chars(), 12)
+  assert_eq(r2.char_at(5), '，')
+}
+
+// --- Stress tests ---
+
+///|
+test "stress: large text roundtrip" {
+  let big = String::make(10000, 'x')
+  let r = Rope::from_str(big)
+  assert_eq(r.len_chars(), 10000)
+  assert_eq(r.to_string(), big)
+}
+
+///|
+test "stress: many sequential inserts" {
+  let mut r = Rope::new()
+  for i = 0; i < 100; i = i + 1 {
+    r = r.append("ab")
+  }
+  assert_eq(r.len_chars(), 200)
+  assert_eq(r.char_at(0), 'a')
+  assert_eq(r.char_at(1), 'b')
+  assert_eq(r.char_at(198), 'a')
+  assert_eq(r.char_at(199), 'b')
+}
+
+///|
+test "stress: large multiline text" {
+  let line = "hello world\n"
+  let mut content = ""
+  for _i = 0; _i < 100; _i = _i + 1 {
+    content = content + line
+  }
+  let r = Rope::from_str(content)
+  // 100 trailing newlines → 101 lines (last line is empty)
+  assert_eq(r.len_lines(), 101)
+  assert_eq(r.len_chars(), 1200)
+}
+
+// --- Roundtrip tests ---
+
+///|
+test "roundtrip: insert then remove equals original" {
+  let original = "hello world"
+  let r = Rope::from_str(original)
+  let r2 = r.insert(5, " beautiful")
+  let r3 = r2.remove(5, 15)
+  assert_eq(r3.to_string(), original)
+}
+
+///|
+test "roundtrip: split then concat equals original" {
+  let original = "hello world"
+  let r = Rope::from_str(original)
+  let (left, right) = r.split(5)
+  let rejoined = left.concat(right)
+  assert_eq(rejoined.to_string(), original)
+}
+
+///|
+test "roundtrip: RopeBuilder equals from_str" {
+  let text = "line1\nline2\nline3\n"
+  let r1 = Rope::from_str(text)
+  let builder = RopeBuilder::new()
+  builder.push("line1\n")
+  builder.push("line2\n")
+  builder.push("line3\n")
+  let r2 = builder.build()
+  assert_eq(r1.op_equal(r2), true)
+}
+
+///|
+test "equality: same content different structure" {
+  let r1 = Rope::from_str("hello world")
+  let r2 = Rope::from_str("hello").insert(5, " world")
+  assert_eq(r1.op_equal(r2), true)
+}
+
+///|
+test "equality: different content" {
+  let r1 = Rope::from_str("hello")
+  let r2 = Rope::from_str("world")
+  assert_eq(r1.op_equal(r2), false)
+}
+
+///|
+test "byte index conversions ascii" {
+  let r = Rope::from_str("hello")
+  assert_eq(r.char_to_byte(0), 0)
+  assert_eq(r.char_to_byte(5), 5)
+  assert_eq(r.byte_to_char(0), 0)
+  assert_eq(r.byte_to_char(5), 5)
+}
+
+///|
+test "byte index conversions unicode" {
+  let r = Rope::from_str("你好")
+  assert_eq(r.len_bytes(), 6)
+  assert_eq(r.char_to_byte(1), 3)
+  assert_eq(r.byte_to_char(3), 1)
+}
+
+///|
+test "split at boundary" {
+  let r = Rope::from_str("hello world")
+  let (left, right) = r.split(0)
+  assert_eq(left.to_string(), "")
+  assert_eq(right.to_string(), "hello world")
+  let (left2, right2) = r.split(11)
+  assert_eq(left2.to_string(), "hello world")
+  assert_eq(right2.to_string(), "")
+}
