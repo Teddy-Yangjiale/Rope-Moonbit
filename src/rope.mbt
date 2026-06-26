@@ -146,6 +146,16 @@ pub fn Rope::byte_to_char(self : Rope, byte_idx : Int) -> Int {
 }
 
 ///|
+pub fn Rope::op_equal(self : Rope, other : Rope) -> Bool {
+  if self.metrics.chars != other.metrics.chars ||
+    self.metrics.bytes != other.metrics.bytes {
+    false
+  } else {
+    self.to_string() == other.to_string()
+  }
+}
+
+///|
 pub fn RopeSlice::to_string(self : RopeSlice) -> String {
   let full = self.rope.to_string()
   full[self.start:self.end_].to_owned()
