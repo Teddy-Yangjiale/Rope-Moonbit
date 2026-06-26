@@ -295,3 +295,74 @@ test "split at boundary" {
   assert_eq(left2.to_string(), "hello world")
   assert_eq(right2.to_string(), "")
 }
+
+// --- Astral-plane (emoji) correctness tests ---
+// These cover the UTF-16 vs char-index bug that affects U+10000+ characters.
+
+///|
+test "emoji: insert preserves surrogate pairs" {
+  let r = Rope::from_str("ab")
+  let r2 = r.insert(1, "😀")
+  assert_eq(r2.len_chars(), 3)
+  assert_eq(r2.char_at(0), 'a')
+  assert_eq(r2.char_at(1), '😀')
+  assert_eq(r2.char_at(2), 'b')
+  assert_eq(r2.to_string(), "a😀b")
+}
+
+///|
+test "emoji: remove is char-aware" {
+  let r = Rope::from_str("a😀b")
+  let r2 = r.remove(1, 2)
+  assert_eq(r2.len_chars(), 2)
+  assert_eq(r2.to_string(), "ab")
+}
+
+///|
+test "emoji: slice is char-aware" {
+  let r = Rope::from_str("a😀b")
+  let s = r.slice(1, 3)
+  assert_eq(s.len_chars(), 2)
+  assert_eq(s.to_string(), "😀b")
+}
+
+///|
+test "emoji: len_bytes counts UTF-8 bytes" {
+  let r = Rope::from_str("😀")
+  assert_eq(r.len_chars(), 1)
+  assert_eq(r.len_bytes(), 4)
+}
+
+///|
+test "emoji: mixed ascii and emoji metrics" {
+  // "hi😀!" = h(1) + i(1) + 😀(4 UTF-8 bytes) + !(1) = 7 bytes
+  let r = Rope::from_str("hi😀!")
+  assert_eq(r.len_chars(), 4)
+  assert_eq(r.len_bytes(), 7)
+  assert_eq(r.char_at(2), '😀')
+  assert_eq(r.char_at(3), '!')
+}
+
+// --- Bounds checking (valid boundary cases) ---
+
+///|
+test "insert at exact boundary is valid" {
+  let r = Rope::from_str("hello")
+  let r2 = r.insert(5, "!")
+  assert_eq(r2.to_string(), "hello!")
+  let r3 = r.insert(0, "!")
+  assert_eq(r3.to_string(), "!hello")
+}
+
+///|
+test "remove entire rope is valid" {
+  let r = Rope::from_str("hello")
+  let r2 = r.remove(0, 5)
+  assert_eq(r2.is_empty(), true)
+}
+
+///|
+test "char_at last valid index" {
+  let r = Rope::from_str("hello")
+  assert_eq(r.char_at(4), 'o')
+}
