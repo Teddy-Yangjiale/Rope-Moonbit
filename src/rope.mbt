@@ -146,6 +146,18 @@ pub fn Rope::byte_to_char(self : Rope, byte_idx : Int) -> Int {
 }
 
 ///|
+pub fn Rope::split(self : Rope, char_idx : Int) -> (Rope, Rope) {
+  let left = self.remove(char_idx, self.metrics.chars)
+  let right = self.remove(0, char_idx)
+  (left, right)
+}
+
+///|
+pub fn Rope::concat(self : Rope, other : Rope) -> Rope {
+  Rope::from_str(self.to_string() + other.to_string())
+}
+
+///|
 pub fn Rope::op_equal(self : Rope, other : Rope) -> Bool {
   if self.metrics.chars != other.metrics.chars ||
     self.metrics.bytes != other.metrics.bytes {
