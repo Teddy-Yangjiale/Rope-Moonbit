@@ -103,6 +103,21 @@ pub fn Rope::line(self : Rope, line_idx : Int) -> RopeSlice {
 }
 
 ///|
+pub fn RopeBuilder::new() -> RopeBuilder {
+  { content: "" }
+}
+
+///|
+pub fn RopeBuilder::push(self : RopeBuilder, chunk : String) -> Unit {
+  self.content = self.content + chunk
+}
+
+///|
+pub fn RopeBuilder::build(self : RopeBuilder) -> Rope {
+  Rope::from_str(self.content)
+}
+
+///|
 pub fn Rope::char_to_byte(self : Rope, char_idx : Int) -> Int {
   let mut bytes = 0
   let mut chars = 0

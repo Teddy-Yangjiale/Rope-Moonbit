@@ -43,3 +43,8 @@ pub struct RopeSlice {
   start : Int
   end_ : Int
 }
+
+///|
+pub struct RopeBuilder {
+  mut content : String
+}
